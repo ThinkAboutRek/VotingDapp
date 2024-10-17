@@ -1,23 +1,23 @@
-const hre = require("hardhat"); // Load Hardhat Runtime Environment
 
 async function main() {
-  // Retrieve the contract factory for "Voting"
-  const Voting = await hre.ethers.getContractFactory("Voting");
-  
-  // Deploy the Voting contract
-  const voting = await Voting.deploy();
-  
-  // Wait for the contract deployment to be completed
+  const [deployer] = await ethers.getSigners();
+
+  console.log("Deploying contracts with the account:", deployer.address);
+
+  // Get the contract factory and deploy the contract
+  const Voting = await ethers.getContractFactory("Voting");
+
+  // pass the Witnet Oracle and verification contract addresses
+  const witnetOracleAddress = "0xYourOracleAddress";  // Placeholder
+  const verificationRequestAddress = "0xYourVerificationRequestAddress";  // Placeholder
+
+  const voting = await Voting.deploy(witnetOracleAddress, verificationRequestAddress);
   await voting.deployed();
 
-  // Log the contract address after deployment
   console.log("Voting contract deployed to:", voting.address);
 }
 
-// Call the main function and handle errors
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

@@ -1,37 +1,43 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.11;
+
+import "witnet-solidity-bridge/contracts/WitnetOracle.sol";  
 
 contract Voting {
-    struct Candidate {
-        uint id;
-        string name;
-        uint voteCount;
-    }
-
-    mapping(uint => Candidate) public candidates;
+    WitnetOracle public witnetOracle;    // Oracle interface for interacting with Witnet
+    bool public votingActive;
     mapping(address => bool) public voters;
+    mapping(uint => uint) public votes;
 
-    uint public candidatesCount;
+    event VoteCasted(address voter, uint candidateId);
+    event VotingEnded();
 
-    event VotedEvent(uint indexed candidateId);
-
-    constructor() {
-        addCandidate("Alice");
-        addCandidate("Bob");
+    constructor(WitnetOracle _witnetOracle) {
+        witnetOracle = _witnetOracle;
+        votingActive = true;
     }
 
-    function addCandidate(string memory _name) private {
-        candidatesCount++;
-        candidates[candidatesCount] = Candidate(candidatesCount, _name, 0);
-    }
-
-    function vote(uint _candidateId) public {
+    function vote(uint candidateId) public {
+        require(votingActive, "Voting is closed.");
         require(!voters[msg.sender], "You have already voted.");
-        require(_candidateId > 0 && _candidateId <= candidatesCount, "Invalid candidate.");
+
+        // add any external check using Witnet here before allowing the vote
+        // Ensure external verification is complete (if used for identity check or external API)
 
         voters[msg.sender] = true;
-        candidates[_candidateId].voteCount++;
+        votes[candidateId] += 1;
 
-        emit VotedEvent(_candidateId);
+        emit VoteCasted(msg.sender, candidateId);
+    }
+
+    function endVoting() public {
+        votingActive = false;
+        emit VotingEnded();
+    }
+
+    // Example function to verify oracle data
+    function verifyWithOracle() public pure returns (bool) {
+        // You can add oracle data check here and return true/false
+        return true;  // Modify this logic as per oracle's output
     }
 }
