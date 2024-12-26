@@ -6,9 +6,10 @@ import "witnet-solidity-bridge/contracts/libs/WitnetV2.sol";
 
 contract Voting {
     WitnetOracle public witnetOracle; // Witnet Oracle interface for external data
+    address public owner; // Owner of the contract
     bool public votingActive;
     mapping(address => bool) public voters; // Tracks voter addresses
-    mapping(uint => uint) public votes; // Tracks votes for candidates
+    uint public votes; // Tracks votes for candidates
 
     event VoteCasted(address voter, uint candidateId);
     event VotingEnded();
@@ -17,7 +18,13 @@ contract Voting {
 
     constructor(WitnetOracle _witnetOracle) {
         witnetOracle = _witnetOracle;
+        owner = msg.sender; // Set the deployer as the owner
         votingActive = true;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Nice try! Only the contract owner can call this function.");
+        _;
     }
 
     // Cast a vote after verifying with the Witnet Oracle
@@ -27,13 +34,13 @@ contract Voting {
         require(verifyWithOracle(requestId), "Verification via oracle failed.");
 
         voters[msg.sender] = true;
-        votes[candidateId] += 1;
+        votes += 1;
 
         emit VoteCasted(msg.sender, candidateId);
     }
 
     // End the voting process
-    function endVoting() public {
+    function endVoting() public onlyOwner {
         votingActive = false;
         emit VotingEnded();
     }
@@ -79,8 +86,8 @@ contract Voting {
     }
 
     // Get vote count for a candidate
-    function getVoteCount(uint candidateId) public view returns (uint) {
-        return votes[candidateId];
+    function getVotesCount() public view returns (uint) {
+        return votes;
     }
 
     // Check if an address has voted
