@@ -9,32 +9,91 @@ contract Voting {
     address public owner; // Owner of the contract
     bool public votingActive;
     mapping(address => bool) public voters; // Tracks voter addresses
-    uint public votes; // Tracks votes for candidates
+    mapping(uint => uint) public candidateVotes; // Tracks votes for each candidate
+    uint[] public candidates; // Dynamic list of candidates
+    uint256 public votingStartTime;
+    uint256 public votingEndTime;
+    bool public resultsFinalized;
+    bool private locked; // Reentrancy lock
 
     event VoteCasted(address voter, uint candidateId);
+    event CandidateAdded(uint candidateId);
+    event CandidateRemoved(uint candidateId);
+    event VotingStarted(uint256 startTime, uint256 endTime);
     event VotingEnded();
     event OracleRequestCreated(uint256 requestId);
     event OracleDataVerified(uint256 requestId, bool valid);
+    event ResultsFinalized();
 
     constructor(WitnetOracle _witnetOracle) {
         witnetOracle = _witnetOracle;
         owner = msg.sender; // Set the deployer as the owner
         votingActive = true;
+        resultsFinalized = false;
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "Nice try! Only the contract owner can call this function.");
+        require(msg.sender == owner, "Only the contract owner can call this function.");
         _;
     }
 
+    modifier votingIsActive() {
+        require(votingActive, "Voting is not active.");
+        _;
+    }
+
+    modifier votingIsWithinPeriod() {
+        require(
+            block.timestamp >= votingStartTime && block.timestamp <= votingEndTime,
+            "Voting is not within the allowed period."
+        );
+        _;
+    }
+
+    modifier nonReentrant() {
+        require(!locked, "Reentrancy detected!");
+        locked = true;
+        _;
+        locked = false;
+    }
+
+    // Add a new candidate
+    function addCandidate(uint candidateId) public onlyOwner votingIsActive {
+        require(!isCandidateExists(candidateId), "Candidate already exists.");
+        candidates.push(candidateId);
+        emit CandidateAdded(candidateId);
+    }
+
+    // Remove an existing candidate
+    function removeCandidate(uint candidateId) public onlyOwner votingIsActive {
+        require(isCandidateExists(candidateId), "Candidate does not exist.");
+        for (uint i = 0; i < candidates.length; i++) {
+            if (candidates[i] == candidateId) {
+                candidates[i] = candidates[candidates.length - 1];
+                candidates.pop();
+                delete candidateVotes[candidateId];
+                emit CandidateRemoved(candidateId);
+                break;
+            }
+        }
+    }
+
+    // Set the voting period
+    function setVotingPeriod(uint256 _startTime, uint256 _endTime) public onlyOwner {
+        require(_endTime > _startTime, "End time must be after start time.");
+        votingStartTime = _startTime;
+        votingEndTime = _endTime;
+        emit VotingStarted(_startTime, _endTime);
+    }
+
     // Cast a vote after verifying with the Witnet Oracle
-    function vote(uint candidateId, uint256 requestId) public {
-        require(votingActive, "Voting is closed.");
+    function vote(uint candidateId, uint256 requestId) public votingIsActive votingIsWithinPeriod nonReentrant {
         require(!voters[msg.sender], "You have already voted.");
+        require(isCandidateExists(candidateId), "Invalid candidate ID.");
         require(verifyWithOracle(requestId), "Verification via oracle failed.");
 
         voters[msg.sender] = true;
-        votes += 1;
+        candidateVotes[candidateId] += 1;
 
         emit VoteCasted(msg.sender, candidateId);
     }
@@ -45,11 +104,18 @@ contract Voting {
         emit VotingEnded();
     }
 
+    // Finalize the results
+    function finalizeResults() public onlyOwner {
+        require(!votingActive, "Voting is still active.");
+        resultsFinalized = true;
+        emit ResultsFinalized();
+    }
+
     // Submit a request to the Witnet Oracle
     function submitOracleRequest(
         bytes32 witnetRequestHash,
         WitnetV2.RadonSLA memory sla
-    ) public payable returns (uint256 requestId) {
+    ) public payable onlyOwner returns (uint256 requestId) {
         requestId = witnetOracle.postRequest{value: msg.value}(
             witnetRequestHash,
             sla
@@ -86,12 +152,23 @@ contract Voting {
     }
 
     // Get vote count for a candidate
-    function getVotesCount() public view returns (uint) {
-        return votes;
+    function getCandidateVotes(uint candidateId) public view returns (uint) {
+        require(isCandidateExists(candidateId), "Invalid candidate ID.");
+        return candidateVotes[candidateId];
     }
 
     // Check if an address has voted
     function hasVoted(address voter) public view returns (bool) {
         return voters[voter];
+    }
+
+    // Check if a candidate exists
+    function isCandidateExists(uint candidateId) internal view returns (bool) {
+        for (uint i = 0; i < candidates.length; i++) {
+            if (candidates[i] == candidateId) {
+                return true;
+            }
+        }
+        return false;
     }
 }
