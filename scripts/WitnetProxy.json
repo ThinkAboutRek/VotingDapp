@@ -1,0 +1,2308 @@
+[
+    {
+        "inputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint32",
+                        "name": "reportResultGasBase",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "reportResultWithCallbackGasBase",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "reportResultWithCallbackRevertGasBase",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "sstoreFromZeroGas",
+                        "type": "uint32"
+                    }
+                ],
+                "internalType": "struct WitOracleBase.EvmImmutables",
+                "name": "_immutables",
+                "type": "tuple"
+            },
+            {
+                "internalType": "contract WitOracleRadonRegistry",
+                "name": "_registry",
+                "type": "address"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "_versionTag",
+                "type": "bytes32"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidInitialization",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "NotInitializing",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "owner",
+                "type": "address"
+            }
+        ],
+        "name": "OwnableInvalidOwner",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            }
+        ],
+        "name": "OwnableUnauthorizedAccount",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "ReentrancyGuardReentrantCall",
+        "type": "error"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "queryId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "reason",
+                "type": "string"
+            }
+        ],
+        "name": "BatchReportError",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint64",
+                "name": "version",
+                "type": "uint64"
+            }
+        ],
+        "name": "Initialized",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+            }
+        ],
+        "name": "OwnershipTransferStarted",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+            }
+        ],
+        "name": "OwnershipTransferred",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "from",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "Received",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address[]",
+                "name": "reporters",
+                "type": "address[]"
+            }
+        ],
+        "name": "ReportersSet",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address[]",
+                "name": "reporters",
+                "type": "address[]"
+            }
+        ],
+        "name": "ReportersUnset",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "Transfer",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "from",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "baseAddr",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "baseCodehash",
+                "type": "bytes32"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "versionTag",
+                "type": "string"
+            }
+        ],
+        "name": "Upgraded",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "evmSubscriber",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "Witnet.QueryCapability",
+                "name": "witCapability",
+                "type": "bytes20"
+            },
+            {
+                "indexed": false,
+                "internalType": "Witnet.QueryCapabilityMember[]",
+                "name": "witCapabilityMembers",
+                "type": "bytes4[]"
+            }
+        ],
+        "name": "WitOracleCommittee",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "requester",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "evmGasPrice",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "evmReward",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "queryId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "bytes32",
+                "name": "queryRadHash",
+                "type": "bytes32"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint16",
+                        "name": "witResultMaxSize",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint16",
+                        "name": "witCommitteeCapacity",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "witCommitteeUnitaryReward",
+                        "type": "uint64"
+                    },
+                    {
+                        "internalType": "Witnet.QueryCapability",
+                        "name": "witCapability",
+                        "type": "bytes20"
+                    }
+                ],
+                "indexed": false,
+                "internalType": "struct Witnet.QuerySLA",
+                "name": "querySLA",
+                "type": "tuple"
+            }
+        ],
+        "name": "WitOracleQuery",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "requester",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "evmGasPrice",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "evmReward",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "queryId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "bytes",
+                "name": "queryBytecode",
+                "type": "bytes"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint16",
+                        "name": "witResultMaxSize",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint16",
+                        "name": "witCommitteeCapacity",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "witCommitteeUnitaryReward",
+                        "type": "uint64"
+                    },
+                    {
+                        "internalType": "Witnet.QueryCapability",
+                        "name": "witCapability",
+                        "type": "bytes20"
+                    }
+                ],
+                "indexed": false,
+                "internalType": "struct Witnet.QuerySLA",
+                "name": "querySLA",
+                "type": "tuple"
+            }
+        ],
+        "name": "WitOracleQuery",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "queryId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "evmGasPrice",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "evmCallbackGas",
+                "type": "uint256"
+            }
+        ],
+        "name": "WitOracleQueryReponseDelivered",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "queryId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "evmGasPrice",
+                "type": "uint256"
+            }
+        ],
+        "name": "WitOracleQueryResponse",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "queryId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "evmGasPrice",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "evmCallbackActualGas",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "evmCallbackRevertReason",
+                "type": "string"
+            },
+            {
+                "indexed": false,
+                "internalType": "bytes",
+                "name": "resultCborBytes",
+                "type": "bytes"
+            }
+        ],
+        "name": "WitOracleQueryResponseDeliveryFailed",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "queryId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "evmResponseDisputer",
+                "type": "address"
+            }
+        ],
+        "name": "WitOracleQueryResponseDispute",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "queryId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "evmSender",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "evmGasPrice",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "evmReward",
+                "type": "uint256"
+            }
+        ],
+        "name": "WitOracleQueryUpgrade",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "evmReward",
+                "type": "uint256"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint8",
+                        "name": "witCommitteeCapacity",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "witCommitteeUnitaryReward",
+                        "type": "uint64"
+                    }
+                ],
+                "indexed": false,
+                "internalType": "struct IWitOracleLegacy.RadonSLA",
+                "name": "witnetSLA",
+                "type": "tuple"
+            }
+        ],
+        "name": "WitnetQuery",
+        "type": "event"
+    },
+    {
+        "stateMutability": "nonpayable",
+        "type": "fallback"
+    },
+    {
+        "inputs": [],
+        "name": "acceptOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "base",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "channel",
+        "outputs": [
+            {
+                "internalType": "bytes4",
+                "name": "",
+                "type": "bytes4"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "class",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "codehash",
+        "outputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_codehash",
+                "type": "bytes32"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "currency",
+        "outputs": [
+            {
+                "internalType": "contract IERC20",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "_queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "deleteQuery",
+        "outputs": [
+            {
+                "internalType": "Witnet.QueryReward",
+                "name": "",
+                "type": "uint72"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "deployer",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_evmGasPrice",
+                "type": "uint256"
+            }
+        ],
+        "name": "estimateBaseFee",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_gasPrice",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint16",
+                "name": "_resultMaxSize",
+                "type": "uint16"
+            }
+        ],
+        "name": "estimateBaseFee",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "gasPrice",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "radHash",
+                "type": "bytes32"
+            }
+        ],
+        "name": "estimateBaseFee",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_evmGasPrice",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint24",
+                "name": "_evmCallbackGasLimit",
+                "type": "uint24"
+            }
+        ],
+        "name": "estimateBaseFeeWithCallback",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_evmGasPrice",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_evmWitPrice",
+                "type": "uint256"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint16",
+                        "name": "witResultMaxSize",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint16",
+                        "name": "witCommitteeCapacity",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "witCommitteeUnitaryReward",
+                        "type": "uint64"
+                    },
+                    {
+                        "internalType": "Witnet.QueryCapability",
+                        "name": "witCapability",
+                        "type": "bytes20"
+                    }
+                ],
+                "internalType": "struct Witnet.QuerySLA",
+                "name": "_querySLA",
+                "type": "tuple"
+            }
+        ],
+        "name": "estimateExtraFee",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256[]",
+                "name": "_queryIds",
+                "type": "uint256[]"
+            },
+            {
+                "internalType": "bytes",
+                "name": "",
+                "type": "bytes"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_evmGasPrice",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_evmWitPrice",
+                "type": "uint256"
+            }
+        ],
+        "name": "estimateReportEarnings",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "_revenues",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_expenses",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256[]",
+                "name": "_queryIds",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "extractWitnetDataRequests",
+        "outputs": [
+            {
+                "internalType": "bytes[]",
+                "name": "_bytecodes",
+                "type": "bytes[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "fetchQueryResponse",
+        "outputs": [
+            {
+                "internalType": "bytes",
+                "name": "",
+                "type": "bytes"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getNextQueryId",
+        "outputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "_queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getQuery",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "components": [
+                            {
+                                "internalType": "address",
+                                "name": "requester",
+                                "type": "address"
+                            },
+                            {
+                                "internalType": "uint24",
+                                "name": "callbackGas",
+                                "type": "uint24"
+                            },
+                            {
+                                "internalType": "uint72",
+                                "name": "_0",
+                                "type": "uint72"
+                            },
+                            {
+                                "internalType": "bytes",
+                                "name": "radonBytecode",
+                                "type": "bytes"
+                            },
+                            {
+                                "internalType": "bytes32",
+                                "name": "radonRadHash",
+                                "type": "bytes32"
+                            }
+                        ],
+                        "internalType": "struct Witnet.QueryRequest",
+                        "name": "request",
+                        "type": "tuple"
+                    },
+                    {
+                        "components": [
+                            {
+                                "internalType": "address",
+                                "name": "reporter",
+                                "type": "address"
+                            },
+                            {
+                                "internalType": "uint64",
+                                "name": "_0",
+                                "type": "uint64"
+                            },
+                            {
+                                "internalType": "uint32",
+                                "name": "resultTimestamp",
+                                "type": "uint32"
+                            },
+                            {
+                                "internalType": "bytes32",
+                                "name": "resultDrTxHash",
+                                "type": "bytes32"
+                            },
+                            {
+                                "internalType": "bytes",
+                                "name": "resultCborBytes",
+                                "type": "bytes"
+                            },
+                            {
+                                "internalType": "address",
+                                "name": "disputer",
+                                "type": "address"
+                            }
+                        ],
+                        "internalType": "struct Witnet.QueryResponse",
+                        "name": "response",
+                        "type": "tuple"
+                    },
+                    {
+                        "components": [
+                            {
+                                "internalType": "uint16",
+                                "name": "witResultMaxSize",
+                                "type": "uint16"
+                            },
+                            {
+                                "internalType": "uint16",
+                                "name": "witCommitteeCapacity",
+                                "type": "uint16"
+                            },
+                            {
+                                "internalType": "uint64",
+                                "name": "witCommitteeUnitaryReward",
+                                "type": "uint64"
+                            },
+                            {
+                                "internalType": "Witnet.QueryCapability",
+                                "name": "witCapability",
+                                "type": "bytes20"
+                            }
+                        ],
+                        "internalType": "struct Witnet.QuerySLA",
+                        "name": "slaParams",
+                        "type": "tuple"
+                    },
+                    {
+                        "internalType": "Witnet.QueryHash",
+                        "name": "hash",
+                        "type": "bytes15"
+                    },
+                    {
+                        "internalType": "Witnet.QueryReward",
+                        "name": "reward",
+                        "type": "uint72"
+                    },
+                    {
+                        "internalType": "Witnet.BlockNumber",
+                        "name": "checkpoint",
+                        "type": "uint64"
+                    }
+                ],
+                "internalType": "struct Witnet.Query",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "_queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getQueryEvmReward",
+        "outputs": [
+            {
+                "internalType": "Witnet.QueryReward",
+                "name": "",
+                "type": "uint72"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "_queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getQueryRequest",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "requester",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint24",
+                        "name": "callbackGas",
+                        "type": "uint24"
+                    },
+                    {
+                        "internalType": "uint72",
+                        "name": "_0",
+                        "type": "uint72"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "radonBytecode",
+                        "type": "bytes"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "radonRadHash",
+                        "type": "bytes32"
+                    }
+                ],
+                "internalType": "struct Witnet.QueryRequest",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "_queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getQueryResponse",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "reporter",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "_0",
+                        "type": "uint64"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "resultTimestamp",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "resultDrTxHash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "resultCborBytes",
+                        "type": "bytes"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "disputer",
+                        "type": "address"
+                    }
+                ],
+                "internalType": "struct Witnet.QueryResponse",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getQueryResponseStatus",
+        "outputs": [
+            {
+                "internalType": "enum IWitOracleLegacy.QueryResponseStatus",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "_queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getQueryResult",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "enum Witnet.ResultStatus",
+                        "name": "status",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "enum Witnet.RadonDataTypes",
+                        "name": "dataType",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "Witnet.TransactionHash",
+                        "name": "drTxHash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "Witnet.ResultTimestamp",
+                        "name": "timestamp",
+                        "type": "uint32"
+                    },
+                    {
+                        "components": [
+                            {
+                                "components": [
+                                    {
+                                        "internalType": "bytes",
+                                        "name": "data",
+                                        "type": "bytes"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "cursor",
+                                        "type": "uint256"
+                                    }
+                                ],
+                                "internalType": "struct WitnetBuffer.Buffer",
+                                "name": "buffer",
+                                "type": "tuple"
+                            },
+                            {
+                                "internalType": "uint8",
+                                "name": "initialByte",
+                                "type": "uint8"
+                            },
+                            {
+                                "internalType": "uint8",
+                                "name": "majorType",
+                                "type": "uint8"
+                            },
+                            {
+                                "internalType": "uint8",
+                                "name": "additionalInformation",
+                                "type": "uint8"
+                            },
+                            {
+                                "internalType": "uint64",
+                                "name": "len",
+                                "type": "uint64"
+                            },
+                            {
+                                "internalType": "uint64",
+                                "name": "tag",
+                                "type": "uint64"
+                            }
+                        ],
+                        "internalType": "struct WitnetCBOR.CBOR",
+                        "name": "value",
+                        "type": "tuple"
+                    }
+                ],
+                "internalType": "struct Witnet.DataResult",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getQueryResultCborBytes",
+        "outputs": [
+            {
+                "internalType": "bytes",
+                "name": "",
+                "type": "bytes"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getQueryResultError",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint8",
+                        "name": "code",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "reason",
+                        "type": "string"
+                    }
+                ],
+                "internalType": "struct IWitOracleLegacy.ResultError",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "_queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getQueryResultStatus",
+        "outputs": [
+            {
+                "internalType": "enum Witnet.ResultStatus",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "_queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getQueryResultStatusDescription",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "_queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getQueryStatus",
+        "outputs": [
+            {
+                "internalType": "enum Witnet.QueryStatus",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "Witnet.QueryId[]",
+                "name": "_queryIds",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "getQueryStatusBatch",
+        "outputs": [
+            {
+                "internalType": "enum Witnet.QueryStatus[]",
+                "name": "_status",
+                "type": "uint8[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "_queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getQueryStatusString",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes",
+                "name": "_initData",
+                "type": "bytes"
+            }
+        ],
+        "name": "initialize",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_queryResponseReporter",
+                "type": "address"
+            }
+        ],
+        "name": "isReporter",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "isUpgradable",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_from",
+                "type": "address"
+            }
+        ],
+        "name": "isUpgradableFrom",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "owner",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "pendingOwner",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_queryRAD",
+                "type": "bytes32"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint16",
+                        "name": "witResultMaxSize",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint16",
+                        "name": "witCommitteeCapacity",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "witCommitteeUnitaryReward",
+                        "type": "uint64"
+                    },
+                    {
+                        "internalType": "Witnet.QueryCapability",
+                        "name": "witCapability",
+                        "type": "bytes20"
+                    }
+                ],
+                "internalType": "struct Witnet.QuerySLA",
+                "name": "_querySLA",
+                "type": "tuple"
+            }
+        ],
+        "name": "postQuery",
+        "outputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "_queryId",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_queryRAD",
+                "type": "bytes32"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint16",
+                        "name": "witResultMaxSize",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint16",
+                        "name": "witCommitteeCapacity",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "witCommitteeUnitaryReward",
+                        "type": "uint64"
+                    },
+                    {
+                        "internalType": "Witnet.QueryCapability",
+                        "name": "witCapability",
+                        "type": "bytes20"
+                    }
+                ],
+                "internalType": "struct Witnet.QuerySLA",
+                "name": "_querySLA",
+                "type": "tuple"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "consumer",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint24",
+                        "name": "gasLimit",
+                        "type": "uint24"
+                    }
+                ],
+                "internalType": "struct Witnet.QueryCallback",
+                "name": "_queryCallback",
+                "type": "tuple"
+            }
+        ],
+        "name": "postQuery",
+        "outputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "_queryId",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes",
+                "name": "_queryRAD",
+                "type": "bytes"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint16",
+                        "name": "witResultMaxSize",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint16",
+                        "name": "witCommitteeCapacity",
+                        "type": "uint16"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "witCommitteeUnitaryReward",
+                        "type": "uint64"
+                    },
+                    {
+                        "internalType": "Witnet.QueryCapability",
+                        "name": "witCapability",
+                        "type": "bytes20"
+                    }
+                ],
+                "internalType": "struct Witnet.QuerySLA",
+                "name": "_querySLA",
+                "type": "tuple"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "consumer",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint24",
+                        "name": "gasLimit",
+                        "type": "uint24"
+                    }
+                ],
+                "internalType": "struct Witnet.QueryCallback",
+                "name": "_queryCallback",
+                "type": "tuple"
+            }
+        ],
+        "name": "postQuery",
+        "outputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "_queryId",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_queryRadHash",
+                "type": "bytes32"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint8",
+                        "name": "witCommitteeCapacity",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "witCommitteeUnitaryReward",
+                        "type": "uint64"
+                    }
+                ],
+                "internalType": "struct IWitOracleLegacy.RadonSLA",
+                "name": "_querySLA",
+                "type": "tuple"
+            }
+        ],
+        "name": "postRequest",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes",
+                "name": "_queryRadBytecode",
+                "type": "bytes"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint8",
+                        "name": "witCommitteeCapacity",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "witCommitteeUnitaryReward",
+                        "type": "uint64"
+                    }
+                ],
+                "internalType": "struct IWitOracleLegacy.RadonSLA",
+                "name": "_querySLA",
+                "type": "tuple"
+            },
+            {
+                "internalType": "uint24",
+                "name": "_queryCallbackGas",
+                "type": "uint24"
+            }
+        ],
+        "name": "postRequestWithCallback",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_queryRadHash",
+                "type": "bytes32"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint8",
+                        "name": "witCommitteeCapacity",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "witCommitteeUnitaryReward",
+                        "type": "uint64"
+                    }
+                ],
+                "internalType": "struct IWitOracleLegacy.RadonSLA",
+                "name": "_querySLA",
+                "type": "tuple"
+            },
+            {
+                "internalType": "uint24",
+                "name": "_queryCallbackGas",
+                "type": "uint24"
+            }
+        ],
+        "name": "postRequestWithCallback",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "proxiableUUID",
+        "outputs": [
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "components": [
+                    {
+                        "components": [
+                            {
+                                "internalType": "uint16",
+                                "name": "witResultMaxSize",
+                                "type": "uint16"
+                            },
+                            {
+                                "internalType": "uint16",
+                                "name": "witCommitteeCapacity",
+                                "type": "uint16"
+                            },
+                            {
+                                "internalType": "uint64",
+                                "name": "witCommitteeUnitaryReward",
+                                "type": "uint64"
+                            },
+                            {
+                                "internalType": "Witnet.QueryCapability",
+                                "name": "witCapability",
+                                "type": "bytes20"
+                            }
+                        ],
+                        "internalType": "struct Witnet.QuerySLA",
+                        "name": "witDrSLA",
+                        "type": "tuple"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "witDrRadHash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "witDrResultEpoch",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "witDrResultCborBytes",
+                        "type": "bytes"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "witDrTxHash",
+                        "type": "bytes32"
+                    }
+                ],
+                "internalType": "struct Witnet.DataPushReport",
+                "name": "_report",
+                "type": "tuple"
+            }
+        ],
+        "name": "pushData",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "enum Witnet.ResultStatus",
+                        "name": "status",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "enum Witnet.RadonDataTypes",
+                        "name": "dataType",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "Witnet.TransactionHash",
+                        "name": "drTxHash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "Witnet.ResultTimestamp",
+                        "name": "timestamp",
+                        "type": "uint32"
+                    },
+                    {
+                        "components": [
+                            {
+                                "components": [
+                                    {
+                                        "internalType": "bytes",
+                                        "name": "data",
+                                        "type": "bytes"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "cursor",
+                                        "type": "uint256"
+                                    }
+                                ],
+                                "internalType": "struct WitnetBuffer.Buffer",
+                                "name": "buffer",
+                                "type": "tuple"
+                            },
+                            {
+                                "internalType": "uint8",
+                                "name": "initialByte",
+                                "type": "uint8"
+                            },
+                            {
+                                "internalType": "uint8",
+                                "name": "majorType",
+                                "type": "uint8"
+                            },
+                            {
+                                "internalType": "uint8",
+                                "name": "additionalInformation",
+                                "type": "uint8"
+                            },
+                            {
+                                "internalType": "uint64",
+                                "name": "len",
+                                "type": "uint64"
+                            },
+                            {
+                                "internalType": "uint64",
+                                "name": "tag",
+                                "type": "uint64"
+                            }
+                        ],
+                        "internalType": "struct WitnetCBOR.CBOR",
+                        "name": "value",
+                        "type": "tuple"
+                    }
+                ],
+                "internalType": "struct Witnet.DataResult",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "components": [
+                    {
+                        "components": [
+                            {
+                                "internalType": "uint16",
+                                "name": "witResultMaxSize",
+                                "type": "uint16"
+                            },
+                            {
+                                "internalType": "uint16",
+                                "name": "witCommitteeCapacity",
+                                "type": "uint16"
+                            },
+                            {
+                                "internalType": "uint64",
+                                "name": "witCommitteeUnitaryReward",
+                                "type": "uint64"
+                            },
+                            {
+                                "internalType": "Witnet.QueryCapability",
+                                "name": "witCapability",
+                                "type": "bytes20"
+                            }
+                        ],
+                        "internalType": "struct Witnet.QuerySLA",
+                        "name": "witDrSLA",
+                        "type": "tuple"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "witDrRadHash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "witDrResultEpoch",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "witDrResultCborBytes",
+                        "type": "bytes"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "witDrTxHash",
+                        "type": "bytes32"
+                    }
+                ],
+                "internalType": "struct Witnet.DataPushReport",
+                "name": "_report",
+                "type": "tuple"
+            },
+            {
+                "internalType": "bytes",
+                "name": "_signature",
+                "type": "bytes"
+            }
+        ],
+        "name": "pushData",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "enum Witnet.ResultStatus",
+                        "name": "status",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "enum Witnet.RadonDataTypes",
+                        "name": "dataType",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "Witnet.TransactionHash",
+                        "name": "drTxHash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "Witnet.ResultTimestamp",
+                        "name": "timestamp",
+                        "type": "uint32"
+                    },
+                    {
+                        "components": [
+                            {
+                                "components": [
+                                    {
+                                        "internalType": "bytes",
+                                        "name": "data",
+                                        "type": "bytes"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "cursor",
+                                        "type": "uint256"
+                                    }
+                                ],
+                                "internalType": "struct WitnetBuffer.Buffer",
+                                "name": "buffer",
+                                "type": "tuple"
+                            },
+                            {
+                                "internalType": "uint8",
+                                "name": "initialByte",
+                                "type": "uint8"
+                            },
+                            {
+                                "internalType": "uint8",
+                                "name": "majorType",
+                                "type": "uint8"
+                            },
+                            {
+                                "internalType": "uint8",
+                                "name": "additionalInformation",
+                                "type": "uint8"
+                            },
+                            {
+                                "internalType": "uint64",
+                                "name": "len",
+                                "type": "uint64"
+                            },
+                            {
+                                "internalType": "uint64",
+                                "name": "tag",
+                                "type": "uint64"
+                            }
+                        ],
+                        "internalType": "struct WitnetCBOR.CBOR",
+                        "name": "value",
+                        "type": "tuple"
+                    }
+                ],
+                "internalType": "struct Witnet.DataResult",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "registry",
+        "outputs": [
+            {
+                "internalType": "contract WitOracleRadonRegistry",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "renounceOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_queryId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "_resultTallyHash",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bytes",
+                "name": "_resultCborBytes",
+                "type": "bytes"
+            }
+        ],
+        "name": "reportResult",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_queryId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint32",
+                "name": "_resultTimestamp",
+                "type": "uint32"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "_resultTallyHash",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bytes",
+                "name": "_resultCborBytes",
+                "type": "bytes"
+            }
+        ],
+        "name": "reportResult",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "queryId",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "resultTimestamp",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "resultTallyHash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "resultCborBytes",
+                        "type": "bytes"
+                    }
+                ],
+                "internalType": "struct IWitOracleTrustableReporter.BatchResult[]",
+                "name": "_batchResults",
+                "type": "tuple[]"
+            }
+        ],
+        "name": "reportResultBatch",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "_batchReward",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address[]",
+                "name": "_queryResponseReporters",
+                "type": "address[]"
+            }
+        ],
+        "name": "setReporters",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "Witnet.QueryCapability",
+                "name": "_capability",
+                "type": "bytes20"
+            },
+            {
+                "internalType": "Witnet.QueryCapabilityMember[]",
+                "name": "_members",
+                "type": "bytes4[]"
+            }
+        ],
+        "name": "settleMyOwnCapableCommittee",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "specs",
+        "outputs": [
+            {
+                "internalType": "bytes4",
+                "name": "",
+                "type": "bytes4"
+            }
+        ],
+        "stateMutability": "pure",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+            }
+        ],
+        "name": "transferOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address[]",
+                "name": "_exReporters",
+                "type": "address[]"
+            }
+        ],
+        "name": "unsetReporters",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "Witnet.QueryId",
+                "name": "_queryId",
+                "type": "uint256"
+            }
+        ],
+        "name": "upgradeQueryEvmReward",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "version",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+]

@@ -29,6 +29,7 @@
     "dotenv": "^16.4.7",
     "ethers": "^6.13.4",
     "js-sha3": "^0.9.3",
+    "witnet-solidity": "^2.0.4",
     "witnet-solidity-bridge": "^2.0.17"
   }
 }
