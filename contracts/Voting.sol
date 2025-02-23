@@ -1,174 +1,254 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.11;
+pragma solidity ^0.8.17;
 
 import "witnet-solidity-bridge/contracts/WitnetOracle.sol";
 import "witnet-solidity-bridge/contracts/libs/WitnetV2.sol";
 
-contract Voting {
-    WitnetOracle public witnetOracle; // Witnet Oracle interface for external data
-    address public owner; // Owner of the contract
-    bool public votingActive;
-    mapping(address => bool) public voters; // Tracks voter addresses
-    mapping(uint => uint) public candidateVotes; // Tracks votes for each candidate
-    uint[] public candidates; // Dynamic list of candidates
+/**
+ * @title VotingWithOracle
+ * @notice A decentralized voting contract that integrates off-chain identity
+ * verification (via Civic) with on-chain verification (via Witnet). It uses a two-step process:
+ *  1. Voter calls verifyVoterWithOracle() after receiving a finalized oracle response.
+ *  2. Once verified, the voter can call castVote() to cast their vote.
+ *
+ * The contract also enforces clear phases: Setup (candidate management),
+ * Active (voting period), and Ended.
+ */
+contract VotingWithOracle {
+    
+    /*//////////////////////////////////////////////////////////////
+                              STATE VARIABLES
+    //////////////////////////////////////////////////////////////*/
+    
+    address public owner;
+    WitnetOracle public witnetOracle;
+    
+    // Voting phases
+    enum VotingState { Setup, Active, Ended }
+    VotingState public currentState;
+    
+    // Voting period
     uint256 public votingStartTime;
     uint256 public votingEndTime;
-    bool public resultsFinalized;
-    bool private locked; // Reentrancy lock
-
-    event VoteCasted(address voter, uint candidateId);
+    
+    // Candidate management
+    uint[] public candidates;
+    mapping(uint => bool) public candidateExists;
+    mapping(uint => uint) public candidateVotes;
+    
+    // Voter management
+    mapping(address => bool) public isVerifiedVoter;
+    mapping(address => bool) public hasVoted;
+    
+    // Reentrancy guard
+    bool private locked;
+    
+    /*//////////////////////////////////////////////////////////////
+                               EVENTS
+    //////////////////////////////////////////////////////////////*/
+    
     event CandidateAdded(uint candidateId);
     event CandidateRemoved(uint candidateId);
+    event VotingPeriodSet(uint256 startTime, uint256 endTime);
     event VotingStarted(uint256 startTime, uint256 endTime);
     event VotingEnded();
     event OracleRequestCreated(uint256 requestId);
     event OracleDataVerified(uint256 requestId, bool valid);
-    event ResultsFinalized();
-
-    constructor(WitnetOracle _witnetOracle) {
-        witnetOracle = _witnetOracle;
-        owner = msg.sender; // Set the deployer as the owner
-        votingActive = true;
-        resultsFinalized = false;
-    }
-
+    event VoterVerified(address voter);
+    event VoteCasted(address voter, uint candidateId);
+    
+    /*//////////////////////////////////////////////////////////////
+                              MODIFIERS
+    //////////////////////////////////////////////////////////////*/
+    
     modifier onlyOwner() {
-        require(msg.sender == owner, "Only the contract owner can call this function.");
+        require(msg.sender == owner, "Only owner can call this function");
         _;
     }
-
-    modifier votingIsActive() {
-        require(votingActive, "Voting is not active.");
-        _;
-    }
-
-    modifier votingIsWithinPeriod() {
-        require(
-            block.timestamp >= votingStartTime && block.timestamp <= votingEndTime,
-            "Voting is not within the allowed period."
-        );
-        _;
-    }
-
+    
     modifier nonReentrant() {
         require(!locked, "Reentrancy detected!");
         locked = true;
         _;
         locked = false;
     }
-
-    // Add a new candidate
-    function addCandidate(uint candidateId) public onlyOwner votingIsActive {
-        require(!isCandidateExists(candidateId), "Candidate already exists.");
+    
+    modifier inState(VotingState _state) {
+        require(currentState == _state, "Invalid state for this action");
+        _;
+    }
+    
+    /*//////////////////////////////////////////////////////////////
+                              CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+    
+    constructor(WitnetOracle _witnetOracle) {
+        owner = msg.sender;
+        witnetOracle = _witnetOracle;
+        currentState = VotingState.Setup;
+    }
+    
+    /*//////////////////////////////////////////////////////////////
+                       CANDIDATE MANAGEMENT (Setup Phase)
+    //////////////////////////////////////////////////////////////*/
+    
+    /**
+     * @notice Add a new candidate.
+     * @param candidateId A unique numeric identifier for the candidate.
+     */
+    function addCandidate(uint candidateId) external onlyOwner inState(VotingState.Setup) {
+        require(!candidateExists[candidateId], "Candidate already exists");
         candidates.push(candidateId);
+        candidateExists[candidateId] = true;
         emit CandidateAdded(candidateId);
     }
-
-    // Remove an existing candidate
-    function removeCandidate(uint candidateId) public onlyOwner votingIsActive {
-        require(isCandidateExists(candidateId), "Candidate does not exist.");
+    
+    /**
+     * @notice Remove an existing candidate.
+     * @param candidateId The candidate's unique identifier.
+     */
+    function removeCandidate(uint candidateId) external onlyOwner inState(VotingState.Setup) {
+        require(candidateExists[candidateId], "Candidate does not exist");
+        
+        // Remove candidate from array (swap and pop)
         for (uint i = 0; i < candidates.length; i++) {
             if (candidates[i] == candidateId) {
                 candidates[i] = candidates[candidates.length - 1];
                 candidates.pop();
-                delete candidateVotes[candidateId];
-                emit CandidateRemoved(candidateId);
                 break;
             }
         }
+        delete candidateExists[candidateId];
+        delete candidateVotes[candidateId];
+        emit CandidateRemoved(candidateId);
     }
-
-    // Set the voting period
-    function setVotingPeriod(uint256 _startTime, uint256 _endTime) public onlyOwner {
-        require(_endTime > _startTime, "End time must be after start time.");
+    
+    /*//////////////////////////////////////////////////////////////
+                         VOTING PERIOD & STATE MANAGEMENT
+    //////////////////////////////////////////////////////////////*/
+    
+    /**
+     * @notice Set the voting period.
+     * @param _startTime Timestamp for when voting begins.
+     * @param _endTime Timestamp for when voting ends.
+     */
+    function setVotingPeriod(uint256 _startTime, uint256 _endTime) external onlyOwner inState(VotingState.Setup) {
+        require(_endTime > _startTime, "End time must be after start time");
         votingStartTime = _startTime;
         votingEndTime = _endTime;
-        emit VotingStarted(_startTime, _endTime);
+        emit VotingPeriodSet(_startTime, _endTime);
     }
-
-    // Cast a vote after verifying with the Witnet Oracle
-    function vote(uint candidateId, uint256 requestId) public votingIsActive votingIsWithinPeriod nonReentrant {
-        require(!voters[msg.sender], "You have already voted.");
-        require(isCandidateExists(candidateId), "Invalid candidate ID.");
-        require(verifyWithOracle(requestId), "Verification via oracle failed.");
-
-        voters[msg.sender] = true;
-        candidateVotes[candidateId] += 1;
-
-        emit VoteCasted(msg.sender, candidateId);
+    
+    /**
+     * @notice Transition the contract from Setup to Active (voting) phase.
+     */
+    function startVoting() external onlyOwner inState(VotingState.Setup) {
+        require(votingStartTime != 0 && votingEndTime != 0, "Voting period not set");
+        currentState = VotingState.Active;
+        emit VotingStarted(votingStartTime, votingEndTime);
     }
-
-    // End the voting process
-    function endVoting() public onlyOwner {
-        votingActive = false;
+    
+    /**
+     * @notice End the voting process.
+     */
+    function endVoting() external onlyOwner inState(VotingState.Active) {
+        currentState = VotingState.Ended;
         emit VotingEnded();
     }
-
-    // Finalize the results
-    function finalizeResults() public onlyOwner {
-        require(!votingActive, "Voting is still active.");
-        resultsFinalized = true;
-        emit ResultsFinalized();
-    }
-
-    // Submit a request to the Witnet Oracle
+    
+    /*//////////////////////////////////////////////////////////////
+                          ORACLE INTEGRATION
+    //////////////////////////////////////////////////////////////*/
+    
+    /**
+     * @notice Submit an oracle request.
+     * @param witnetRequestHash The hash of the Witnet request.
+     * @param sla The service level agreement parameters for the request.
+     * @return requestId The unique identifier for the posted request.
+     */
     function submitOracleRequest(
         bytes32 witnetRequestHash,
         WitnetV2.RadonSLA memory sla
-    ) public payable onlyOwner returns (uint256 requestId) {
-        requestId = witnetOracle.postRequest{value: msg.value}(
-            witnetRequestHash,
-            sla
-        );
+    ) external payable onlyOwner returns (uint256 requestId) {
+        requestId = witnetOracle.postRequest{value: msg.value}(witnetRequestHash, sla);
         emit OracleRequestCreated(requestId);
         return requestId;
     }
-
-    // Verify oracle data for eligibility or other criteria
-    function verifyWithOracle(uint256 requestId) public returns (bool) {
-        // Ensure the query has been finalized
-        WitnetV2.QueryStatus queryStatus = witnetOracle.getQueryStatus(
-            requestId
-        );
-        require(
-            queryStatus == WitnetV2.QueryStatus.Finalized,
-            "Request is not finalized."
-        );
-
-        // Check the response status to ensure it has been delivered
-        WitnetV2.ResponseStatus responseStatus = witnetOracle
-            .getQueryResponseStatus(requestId);
-        require(
-            responseStatus == WitnetV2.ResponseStatus.Delivered,
-            "Request failed or not delivered."
-        );
-
-        // Fetch and decode the result
+    
+    /**
+     * @notice After an oracle request is finalized, voters call this to verify their eligibility.
+     * @param requestId The unique identifier of the oracle request.
+     */
+    function verifyVoterWithOracle(uint256 requestId) external {
+        // Ensure the oracle request is finalized and delivered
+        require(witnetOracle.getQueryStatus(requestId) == WitnetV2.QueryStatus.Finalized, "Request not finalized");
+        require(witnetOracle.getQueryResponseStatus(requestId) == WitnetV2.ResponseStatus.Delivered, "Request not delivered");
+        
+        // Decode the result from the oracle (expected to be a boolean)
         bytes memory result = witnetOracle.getQueryResultCborBytes(requestId);
         bool isValid = abi.decode(result, (bool));
-
+        
+        require(isValid, "Oracle verification failed");
+        isVerifiedVoter[msg.sender] = true;
         emit OracleDataVerified(requestId, isValid);
-        return isValid;
+        emit VoterVerified(msg.sender);
     }
-
-    // Get vote count for a candidate
-    function getCandidateVotes(uint candidateId) public view returns (uint) {
-        require(isCandidateExists(candidateId), "Invalid candidate ID.");
+    
+    /*//////////////////////////////////////////////////////////////
+                             VOTING FUNCTIONALITY
+    //////////////////////////////////////////////////////////////*/
+    
+    /**
+     * @notice Cast a vote for a candidate.
+     * @param candidateId The unique identifier of the candidate.
+     */
+    function castVote(uint candidateId) external nonReentrant inState(VotingState.Active) {
+        require(block.timestamp >= votingStartTime && block.timestamp <= votingEndTime, "Not within voting period");
+        require(candidateExists[candidateId], "Candidate does not exist");
+        require(isVerifiedVoter[msg.sender], "Voter not verified");
+        require(!hasVoted[msg.sender], "Already voted");
+        
+        candidateVotes[candidateId] += 1;
+        hasVoted[msg.sender] = true;
+        emit VoteCasted(msg.sender, candidateId);
+    }
+    
+    /*//////////////////////////////////////////////////////////////
+                             VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+    
+    /**
+     * @notice Get the list of candidate IDs.
+     */
+    function getCandidates() external view returns (uint[] memory) {
+        return candidates;
+    }
+    
+    /**
+     * @notice Retrieve the vote count for a specific candidate.
+     * @param candidateId The candidate's unique identifier.
+     */
+    function getCandidateVotes(uint candidateId) external view returns (uint) {
+        require(candidateExists[candidateId], "Candidate does not exist");
         return candidateVotes[candidateId];
     }
-
-    // Check if an address has voted
-    function hasVoted(address voter) public view returns (bool) {
-        return voters[voter];
-    }
-
-    // Check if a candidate exists
-    function isCandidateExists(uint candidateId) internal view returns (bool) {
+    
+    /**
+     * @notice Compute the winner by highest vote count.
+     * @return winnerId The candidate ID of the winner.
+     * @return winnerVoteCount The vote count of the winner.
+     */
+    function getWinner() external view returns (uint winnerId, uint winnerVoteCount) {
+        require(currentState == VotingState.Ended, "Voting not ended");
+        uint maxVotes = 0;
         for (uint i = 0; i < candidates.length; i++) {
-            if (candidates[i] == candidateId) {
-                return true;
+            uint candidateId = candidates[i];
+            uint votes = candidateVotes[candidateId];
+            if (votes > maxVotes) {
+                maxVotes = votes;
+                winnerId = candidateId;
             }
         }
-        return false;
+        winnerVoteCount = maxVotes;
     }
 }
